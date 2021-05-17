@@ -17,3 +17,10 @@ print(fps('aaa', 10, '>'))
 print(fps('aaa', 10, '>'))
 print(fps('aaaaaaa', 10, '>'))
 print(fps('한글', 10, '>'))
+
+# from tqdm import tqdm
+# import time
+
+# for i in tqdm(range(1, 600), mininterval=0.01):
+#     time.sleep(0.1)
+
