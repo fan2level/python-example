@@ -1,0 +1,41 @@
+﻿
+digraph widget{
+    compound=true
+    
+    Widget
+    
+    node[shape=box]
+    subgraph cluster_basic{
+        label="Basic Widget"
+        style=filled fillcolor=whitesmoke
+        color=white
+        
+        Frame
+        Label
+        Button
+        Checkbutton
+        Radiobutton
+        Entry
+        Combobox
+
+        Table[style=filled fillcolor=skyblue]
+        
+        Entry -> Table
+    }
+
+    subgraph cluster_more{
+        label="More Widget"
+        style=filled fillcolor=whitesmoke
+        color=white
+        
+        Listbox
+        Scrollbar
+        Text
+        Scale
+        Spinbox
+        Progressbar
+    }
+
+    Widget -> Frame[lhead=cluster_basic minlen=2]
+    Widget -> Progressbar[lhead=cluster_more minlen=2]
+}
