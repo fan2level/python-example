@@ -5,11 +5,11 @@ from tkinter import ttk
 # https://tkdocs.com/index.html
 
 window = Tk()
+window.bind("<Escape>", exit)
+
 window.title("window title")
 window.geometry("640x320+0+0")
 window.resizable(False, False)
-
-window.bind("<Escape>", exit)
 
 width=1
 
