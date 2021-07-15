@@ -13,3 +13,5 @@ print(type(l))
 
 print(' '.isspace())
 print(u"한글")
+
+
