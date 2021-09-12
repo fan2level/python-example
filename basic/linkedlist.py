@@ -3,7 +3,17 @@
 class Node(object):
     def __init__(self, data):
         self.data = data
-        self.next = None
+        self.__next = None
+
+    @property
+    def next(self):
+        return self.__next
+    @next.setter
+    def next(self, data):
+        self.__next = data
+
+class Data(Node):
+    pass
 
 class LinkedList(object):
     def __init__(self):
@@ -17,9 +27,9 @@ class LinkedList(object):
 
 if __name__ == '__main__':
     llist = LinkedList()
-    one = Node(1)
-    second = Node(2)
-    third = Node(3)
+    one = Data(1)
+    second = Data(2)
+    third = Data(3)
 
     llist.head = one
     one.next = second
