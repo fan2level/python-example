@@ -17,10 +17,6 @@ digraph widget{
         Radiobutton
         Entry
         Combobox
-
-        Table[style=filled fillcolor=skyblue]
-        
-        Entry -> Table
     }
 
     subgraph cluster_more{
@@ -34,6 +30,10 @@ digraph widget{
         Scale
         Spinbox
         Progressbar
+        Tree
+
+        Table[style=filled fillcolor=skyblue]
+        Tree -> Table
     }
 
     Widget -> Frame[lhead=cluster_basic minlen=2]
