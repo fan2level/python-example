@@ -15,16 +15,18 @@ _path = args.path
 _target = args.target
 
 elfs = list()
-for folder, sub, files in os.walk(_path):
-    for file in files:
-        try:
-            efile = pELF(os.path.join(folder, file))
-        except Exception as e:
-            continue
-        if efile.is_elf == False:
-            continue
+for file in os.listdir(_path):
+    filepath = os.path.join(_path, file)
+    if os.path.isdir(filepath):
+        continue
+    try:
+        efile = pELF(filepath)
+    except Exception as e:
+        continue
+    if efile.is_elf == False:
+        continue
 
-        elfs.append(efile)
+    elfs.append(efile)
 
 for elf in elfs:
     print(json.loads(elf.toJson()))

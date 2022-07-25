@@ -9,27 +9,28 @@ class pELF(object):
     parse elf for check dependency
     
     """
-    def __init__(self, filepath):
+    def __init__(self, path):
         self.__pp = dict()
-        self.__pp['filepath'] = filepath
+        self.__pp['path'] = os.path.abspath(path)
+        self.__pp['link'] = os.path.realpath(path)
         ppelf = dict()
         self.__pp['elf'] = ppelf
         ppelf['name'] = 'none'
         self.__dep = list()
         ppelf['needed'] = list()
         self.is_elf = True
-        with open(filepath, 'rb') as ef:
+        with open(path, 'rb') as ef:
             efile = ELFFile(ef)
             e_type = efile.structs.e_type
             if e_type == 'ET_EXEC':
-                ppelf['name'] = os.path.basename(filepath)
+                ppelf['name'] = os.path.basename(path)
             elif e_type == 'ET_DYN':
                 xx = next((x for x in efile.iter_segments() if x.header.p_type == 'PT_INTERP'), None)
                 if xx != None:
-                    ppelf['name'] = os.path.basename(filepath)
+                    ppelf['name'] = os.path.basename(path)
             else:
                 self.is_elf = False
-                print("e_type:{0} {1}".format(e_type), filepath)
+                print("e_type:{0} {1}".format(e_type), path)
                 return
             dynamic= efile.get_section_by_name('.dynamic')
             dynstr = efile.get_section_by_name('.dynstr')
@@ -56,20 +57,8 @@ class pELF(object):
         print(self.toJson())
 
 if __name__ == '__main__':
-    ii = 'libstdc++.so.6'
+    ii = '.sample/libglib-2.0.so'
     a = pELF(ii)
     a.dump()
-    exit()
 
-    for folder, sub, files in os.walk(ii):
-        for file in files:
-            filepath = os.path.join(folder, file)
-            try:
-                efile = pELF(filepath)
-            except Exception as e:
-                continue
-            if efile.is_elf == False:
-                continue
-
-            # print(os.path.join(folder, file))
-            efile.dump()
+    print('done')
