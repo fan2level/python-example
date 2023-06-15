@@ -22,10 +22,10 @@ class Arxml(object):
     def walk_path(self, node, path, indent=0):
         ''' get AUTOSAR path to dictionary
         '''
-        tag = node.tag.replace(self.ns_, '')
         if node.tag == self.ns_+"SHORT-NAME":
             path['p'] = node.text
         else:
+            # tag = node.tag.replace(self.ns_, '')
             # path['p'] = tag
             subpath = list()
             for child in node:
