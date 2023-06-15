@@ -20,18 +20,26 @@ class Arxml(object):
         self.__logger = logger
 
     def walk_path(self, node, path, indent=0):
+        ''' get AUTOSAR path to dictionary
+        '''
+        tag = node.tag.replace(self.ns_, '')
         if node.tag == self.ns_+"SHORT-NAME":
-            # ll.debug(' '*indent+node.text)
-            path['name'] = node.text
+            path['p'] = node.text
         else:
-            path['name'] = '_'
+            # path['p'] = tag
             subpath = list()
-            path['/'] = subpath
             for child in node:
-                subitem = dict()
-                subpath.append(subitem)
-                self.walk_path(child, subitem, indent+2)
-
+                childpath = dict()
+                subpath.append(childpath)
+                self.walk_path(child, childpath, indent+2)
+            # path 없는 노드는 삭제
+            if len(subpath) > 0:
+                x0 = [x for x in subpath if len(x) == 0]
+                if len(x0) > 0:
+                    [subpath.remove(x) for x in x0]
+                if len(subpath) > 0:
+                    path['/'] = subpath
+            
     def make_ns(self, xpath):
         if isinstance(xpath, list):
             path = './'
@@ -58,14 +66,14 @@ if __name__=='__main__':
     console.setFormatter(logging.Formatter(''))
     ll.addHandler(console)
     
-    filepath = 'sample/AUTOSAR_MOD_AISpecification_BaseTypes_Standard.arxml'
-    # filepath = 'sample/AUTOSAR_MOD_ECUConfigurationParameters.arxml'
-    filepath = 'c.xml'
+    # filepath = 'sample/AUTOSAR_MOD_AISpecification_BaseTypes_Standard.arxml'
     # filepath = 'b.arxml'
+    filepath = 'c.xml'
+    # filepath = 'sample/AUTOSAR_MOD_ECUConfigurationParameters.arxml'
+    # filepath = 'sample/AUTOSAR_MOD_AISpecification_Collection_Body_Blueprint.arxml'
     ar = Arxml(Path(filepath), ll)
-    path = {}
+    path = {'p':'/'}
     ar.walk_path(ar.root, path, 0)
     pprint(path)
-    
     print('done')
                         
