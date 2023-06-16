@@ -39,7 +39,21 @@ class Arxml(object):
                     [subpath.remove(x) for x in x0]
                 if len(subpath) > 0:
                     path['/'] = subpath
-            
+
+    def getPath(self, path):
+        ''' return path to list
+        '''
+        pathset = list()
+        path0 = ''
+        x = next((x for x in path if 'p' in x), None)
+        xn= [x for x in path if '/' in x]
+        if x is not None:
+            path = x['p']
+        if len(xn) > 0:
+            for subpath in xn:
+                self.getPath(subpath['/'])
+        return pathset
+        
     def make_ns(self, xpath):
         if isinstance(xpath, list):
             path = './'
@@ -75,5 +89,7 @@ if __name__=='__main__':
     path = {'p':'/'}
     ar.walk_path(ar.root, path, 0)
     pprint(path)
-    print('done')
+    ll.debug('======================================================================')
+    ar.getPath(path['/'])
+    ll.debug('done')
                         
