@@ -18,6 +18,7 @@ class Arxml(object):
         root = tree.getroot()
         self.__root = root
         self.__logger = logger
+        self.pathset = list()
 
     def walk_path(self, node, path, indent=0):
         ''' get AUTOSAR path to dictionary
@@ -40,19 +41,41 @@ class Arxml(object):
                 if len(subpath) > 0:
                     path['/'] = subpath
 
-    def getPath(self, path):
-        ''' return path to list
+    def makepath0(self, path, pathset):
+        ''' return path to pathset
+        `pathset {'n':name, 'c':childlen, 'p':parent}
         '''
-        pathset = list()
-        path0 = ''
         x = next((x for x in path if 'p' in x), None)
         xn= [x for x in path if '/' in x]
         if x is not None:
             path = x['p']
+            pathset['n'] = x['p']
         if len(xn) > 0:
+            pathset_childlen = list()
+            pathset['c'] = pathset_childlen
             for subpath in xn:
-                self.getPath(subpath['/'])
+                pathset_child = {'p':pathset}
+                pathset_childlen.append(pathset_child)
+                self.makepath0(subpath['/'], pathset_child)
         return pathset
+
+    def makepath1(self, pathset):
+        if 'n' in pathset:
+            path = self.getpath(pathset)
+            path = re.sub('\/+','/',path)
+            self.pathset.append(path)
+        if 'c' in pathset:
+            for child in pathset['c']:
+                self.makepath1(child)
+    
+    def getpath(self, pathset):
+        uri = ''
+        if pathset is None:
+            return uri
+        if 'n' in pathset:
+            uri+=pathset['n']
+        uri = self.getpath(pathset['p'])+'/'+uri
+        return uri
         
     def make_ns(self, xpath):
         if isinstance(xpath, list):
@@ -83,13 +106,16 @@ if __name__=='__main__':
     # filepath = 'sample/AUTOSAR_MOD_AISpecification_BaseTypes_Standard.arxml'
     # filepath = 'b.arxml'
     filepath = 'c.xml'
-    # filepath = 'sample/AUTOSAR_MOD_ECUConfigurationParameters.arxml'
+    filepath = 'sample/AUTOSAR_MOD_ECUConfigurationParameters.arxml'
     # filepath = 'sample/AUTOSAR_MOD_AISpecification_Collection_Body_Blueprint.arxml'
     ar = Arxml(Path(filepath), ll)
     path = {'p':'/'}
     ar.walk_path(ar.root, path, 0)
-    pprint(path)
+    # pprint(path)
     ll.debug('======================================================================')
-    ar.getPath(path['/'])
+    pathset0 = {'p':None}
+    ar.makepath0(path['/'], pathset0)
+    ar.makepath1(pathset0)
+    [ll.debug(x) for x in ar.pathset]
     ll.debug('done')
                         
