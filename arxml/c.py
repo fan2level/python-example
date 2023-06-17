@@ -1,17 +1,17 @@
 # -*-coding:utf-8-*-
 
 import os,sys
-import argparse
-from pathlib import Path
-from xml.etree.ElementTree import *
 import logging
+from pathlib import Path
+import argparse
+from xml.etree.ElementTree import *
 import re
 from pprint import pprint
 
 class Arxml(object):
     ns = 'http://autosar.org/schema/r4.0'
     ns_= '{'+ ns + '}'
-    p0 = re.compile('^.*-REF$')
+
     def __init__(self, arxml, logger=logging):
         self.__file = Path(arxml)
         tree = parse(arxml)
@@ -24,10 +24,10 @@ class Arxml(object):
         ''' get AUTOSAR path to dictionary
         '''
         if node.tag == self.ns_+"SHORT-NAME":
-            path['p'] = node.text
+            path['m'] = node.text.strip()
         else:
             # tag = node.tag.replace(self.ns_, '')
-            # path['p'] = tag
+            # path['m'] = tag
             subpath = list()
             for child in node:
                 childpath = dict()
@@ -41,42 +41,49 @@ class Arxml(object):
                 if len(subpath) > 0:
                     path['/'] = subpath
 
-    def makepath0(self, path, pathset):
-        ''' return path to pathset
-        `pathset {'n':name, 'c':childlen, 'p':parent}
+    def makepath(self, node):
+        ''' return unique pathset to list
         '''
-        x = next((x for x in path if 'p' in x), None)
-        xn= [x for x in path if '/' in x]
-        if x is not None:
-            path = x['p']
-            pathset['n'] = x['p']
-        if len(xn) > 0:
-            pathset_childlen = list()
-            pathset['c'] = pathset_childlen
-            for subpath in xn:
-                pathset_child = {'p':pathset}
-                pathset_childlen.append(pathset_child)
-                self.makepath0(subpath['/'], pathset_child)
-        return pathset
+        pathsetx = list()
+        def makepath0(path, pathset):
+            x = next((x for x in path if 'm' in x), None)
+            xn= [x for x in path if '/' in x]
+            if x is not None:
+                path = x['m']
+                pathset['n'] = x['m']
+            if len(xn) > 0:
+                pathset_childlen = list()
+                pathset['c'] = pathset_childlen
+                for subpath in xn:
+                    pathset_child = {'p':pathset}
+                    pathset_childlen.append(pathset_child)
+                    makepath0(subpath['/'], pathset_child)
+            return pathset
+        def makepath1(pathset):
+            if 'n' in pathset:
+                path = getpath(pathset)
+                path = re.sub('\/+','/',path)
+                pathsetx.append(path)
+            if 'c' in pathset:
+                for child in pathset['c']:
+                    makepath1(child)
 
-    def makepath1(self, pathset):
-        if 'n' in pathset:
-            path = self.getpath(pathset)
-            path = re.sub('\/+','/',path)
-            self.pathset.append(path)
-        if 'c' in pathset:
-            for child in pathset['c']:
-                self.makepath1(child)
-    
-    def getpath(self, pathset):
-        uri = ''
-        if pathset is None:
+        def getpath(pathset):
+            uri = ''
+            if pathset is None:
+                return uri
+            if 'n' in pathset:
+                uri+=pathset['n']
+            uri = getpath(pathset['p'])+'/'+uri
             return uri
-        if 'n' in pathset:
-            uri+=pathset['n']
-        uri = self.getpath(pathset['p'])+'/'+uri
-        return uri
-        
+
+        path = {'m':'/'}
+        self.walk_path(node, path)
+        pathset0 = {'p':None}
+        makepath0(path['/'], pathset0)
+        makepath1(pathset0)
+        return pathsetx
+                    
     def make_ns(self, xpath):
         if isinstance(xpath, list):
             path = './'
@@ -102,20 +109,35 @@ if __name__=='__main__':
     console = logging.StreamHandler()
     console.setFormatter(logging.Formatter(''))
     ll.addHandler(console)
+
+    # parser = argparse.ArgumentParser()
+    # group = parser.add_mutually_exclusive_group(required=True)
+    # group.add_argument('--directory', '-d', help="directory path")
+    # group.add_argument('--filepath', '-f', help="file path")
+    # args = parser.parse_args()
+
+    # a_directory = args.directory
+    # a_filepath = args.filepath
+
+    # if a_directory:
+    #     for file in os.listdir(a_directory):
+    #         filepath = Path(a_directory) / file
+    #         ar = Arxml(filepath, ll)
+    #         [ll.debug(x) for x in ar.makepath(ar.root)]
+    # elif a_filepath:
+    #     if Path(a_filepath).exists():
+    #         filepath = a_filepath
+    #         ar = Arxml(Path(filepath), ll)
+    #         [ll.debug(x) for x in ar.makepath(ar.root)]
     
     # filepath = 'sample/AUTOSAR_MOD_AISpecification_BaseTypes_Standard.arxml'
     # filepath = 'b.arxml'
     filepath = 'c.xml'
-    filepath = 'sample/AUTOSAR_MOD_ECUConfigurationParameters.arxml'
+    # filepath = 'sample/AUTOSAR_MOD_ECUConfigurationParameters.arxml'
     # filepath = 'sample/AUTOSAR_MOD_AISpecification_Collection_Body_Blueprint.arxml'
     ar = Arxml(Path(filepath), ll)
-    path = {'p':'/'}
-    ar.walk_path(ar.root, path, 0)
-    # pprint(path)
-    ll.debug('======================================================================')
-    pathset0 = {'p':None}
-    ar.makepath0(path['/'], pathset0)
-    ar.makepath1(pathset0)
-    [ll.debug(x) for x in ar.pathset]
+    [ll.debug(x) for x in ar.makepath(ar.root)]
+
+    
     ll.debug('done')
                         
