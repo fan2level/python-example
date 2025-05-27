@@ -107,8 +107,17 @@ class NVDCVE(object):
         print(json.dumps(self.__nvd_cve, indent=2))
 
 class NVDAPI(object):
-    CVE_API_20='https://services.nvd.nist.gov/rest/json/cves/2.0'
-    CVE_Change_History_API_20='https://services.nvd.nist.gov/rest/json/cvehistory/2.0'
+    schema={
+        "CVE API": 'https://csrc.nist.gov/schema/nvd/api/2.0/cve_api_json_2.0.schema',
+        "CVSSv3.1":'https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.1.json',
+        "CVSSv3.0": 'https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.0.json',
+        "CVSSv2.0": 'https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v2.0.json',
+        "CVE Change History API": 'https://csrc.nist.gov/schema/nvd/api/2.0/cve_history_api_json_2.0.schema'
+    }
+    api={
+        "CVE API": 'https://services.nvd.nist.gov/rest/json/cves/2.0',
+        "CVE Change History": 'https://services.nvd.nist.gov/rest/json/cvehistory/2.0'
+    }
     param_cveId='cveId'
     param_pubStartDate='pubStartDate'
     param_pubEndDate='pubEndDate'
@@ -161,7 +170,7 @@ class NVDAPI(object):
                 return cve
 
         params = {self.param_cveId:cve_id}
-        response = requests.get(self.CVE_API_20, params=params)
+        response = requests.get(self.api["CVE API"], params=params)
         if response.status_code != 200:
             print("request is failed.. ", response.status_code)
         else:
@@ -178,7 +187,7 @@ class NVDAPI(object):
         receivedPage = 0
         pprint(params)
         while True:
-            response = requests.get(self.CVE_Change_History_API_20, params=params)
+            response = requests.get(self.api["CVE Change History"], params=params)
             if response.status_code != 200:
                 print("request is failed.. ", response.status_code)
                 bbreak = True
