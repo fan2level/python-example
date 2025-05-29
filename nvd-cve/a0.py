@@ -185,7 +185,6 @@ class NVDAPI(object):
         bbreak = False
         totalResults = 0
         receivedPage = 0
-        pprint(params)
         while True:
             response = requests.get(self.api["CVE Change History"], params=params)
             if response.status_code != 200:
@@ -193,14 +192,14 @@ class NVDAPI(object):
                 bbreak = True
             else:
                 nvd_cve = json.loads(response.text)
-                print(json.dumps(nvd_cve, indent=2))
+                # print(json.dumps(nvd_cve, indent=2))
                 totalResults = nvd_cve[self.param_totalResults]
                 receivedPage += nvd_cve[self.param_resultsPerPage]
                 if receivedPage < totalResults:
                     params[self.param_startIndex] = receivedPage
                 else:
                     bbreak = True
-                self.toJson(nvd_cve)
+                self.toJson0(nvd_cve, self.makePath("cve.history"))
 
             time.sleep(delay)
 
@@ -211,7 +210,7 @@ class NVDAPI(object):
         if outfile is None:
             return
         with open(outfile, 'w', encoding='utf-8') as f:
-            json.dump(json.loads(nvd_cve), f, indent=2)
+            json.dump(nvd_cve, f, indent=2)
 
     def toJson(self, nvd_cve):
         if 'vulnerabilities' not in nvd_cve:
@@ -267,8 +266,8 @@ if __name__ == '__main__':
     if False:
         nvdapi = NVDAPI("nvd.data5")
         params = {
-            NVDAPI.param_changeStartDate: '2025-02-18T00:00:00+09:00',
-            NVDAPI.param_changeEndDate:'2025-02-19T00:00:00+09:00'
+            NVDAPI.param_changeStartDate: '2025-02-20T00:00:00+09:00',
+            NVDAPI.param_changeEndDate:'2025-02-21T00:00:00+09:00'
             }
         nvdapi.request_cve_update_history(params)
         exit()
