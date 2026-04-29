@@ -5,7 +5,7 @@ from pathlib import Path
 from xml.etree.ElementTree import *
 import random
 
-class pAospManifest(object):
+class pManifest(object):
     def __init__(self, manifest):
         self.__file = manifest
         self.__tree = parse(self.__file)
@@ -82,13 +82,13 @@ def run(project, debug=False):
             
 if __name__ == '__main__':
     i = Path('madatory.xml')
-    m0 = pAospManifest(i)
+    m0 = pManifest(i)
     # m0.dump()
     i = Path('default.xml')
-    m1 = pAospManifest(i)
+    m1 = pManifest(i)
     # m1.dump()
     i = Path('resize.xml')
-    m2 = pAospManifest(i)
+    m2 = pManifest(i)
     # m2.dump()
 
     m3 = m1.merge(m0).merge(m2)
