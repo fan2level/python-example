@@ -203,7 +203,11 @@ class pAndroidBp(object):
 
     def dump_module(self, module, indent=0):
         print(f"{' '*indent}==================================================")
-        print(f"{' '*indent}name: {module['name']} type: {module['type']}")
+        if module:
+            print(f"{' '*indent}name: {module['name']} type: {module['type']}")
+        else:
+            print(f"{' '*indent}name: None")
+            return
         if "defaults" in module:
             print(f"{' '*indent}  defaults: {module['defaults']}")
         if "depends" in module:
@@ -223,34 +227,25 @@ class pAndroidBp(object):
             print(f"{' '*indent}      {d}")
     
 if __name__ == '__main__':
-    aosp_root = "../../../android-tools/aosp-16.0.0_r2/build"
-    aosp_root = "../../../android-tools/aosp-16.0.0_r2/art"
-    aosp_root = Path("../../../android-tools/aosp-16.0.0_r2/system")
-    aosp_root = Path("../../../android-tools/aosp-16.0.0_r2/")
-    aospbp = pAospBp(aosp_root)
-    groups = ['build', 'art', 'system']
-    [aospbp.add_group(x) for x in groups]
-    for group in groups:
-        print(f"{group}")
-        depends = aospbp.get_group_depends(group)
-        for depend in depends:
-            g = aospbp.find_group(depend)
-            if g and g != group:
-                print(f"  {depend:50s} ... {g}")
-    
-    # aospbp.remove_group("system/core/fastboot")
-    # module_name = "fastboot"
-    # print(f"find {module_name}")
-    # aospbp.traverse_dependency(module_name)
-    # aospbp.dump()
-    exit(0)
-    
     parser = argparse.ArgumentParser()
     parser.add_argument('--aosp_root', '-r', required=True, help="aosp source directory")
     parser.add_argument('--debug', '-d', action='store_true', help="print debug info")
+    parser.add_argument('--find', help="find module and return AndroidBp")
+
     args = parser.parse_args()
-    aosp_root = args.aosp_root
+    aosp_root = Path(args.aosp_root)
     debug = args.debug
+    find = args.find
 
     aospbp = pAospBp(aosp_root)
-    aospbp.dump()
+    print(f"{find}")
+    group = aospbp.find_group(find)
+    if group:
+        print(f"  group: {group}")
+    bp = aospbp.find_bp(find)
+    if bp:
+        m = bp.find_module(find)
+        bp.dump_module(m, 2)
+    else:
+        print(f"  None")
+        
