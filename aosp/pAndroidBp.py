@@ -28,6 +28,12 @@ class pAospBp(object):
                 bp = pAndroidBp(filepath, debug)
                 self.add(bp)
 
+        # in this time we complete dependency
+        for bp in self.bps:
+            for m in bp.modules:
+                pass
+        
+
     def add(self, bp):
         # classfy group from filepath
         x = next((x for x in self.groups if bp.filepath.as_posix().startswith(str(self.root / x))), None)
@@ -87,23 +93,30 @@ class pAospBp(object):
                     return bp
         return None
     
-    def traverse_dependency(self, module_name, indent=0):
-        b = self.find_bp(module_name)
-        if b:
-            m = b.find_module(module_name)
+    def trace_dependency(self, module_name, trace, indent=0):
+        bp = self.find_bp(module_name)
+        if bp:
+            m = bp.find_module(module_name)
             if m:
-                if 'depends' in m:
-                    b.dump_module(m, indent+4)
-                    for d in sorted(m['depends']):
-                        self.traverse_dependency(d, indent+8)
+                if len(m.depends) > 0:
+                    print(f"{' '*indent}--------------------------------------------------")
+                    print(f"{' '*indent}filepath: {bp.filepath.as_posix()}")
+                    m.dump(indent)
+                    for d in sorted(m.depends):
+                        self.trace_dependency(d, trace, indent+2+4)
                 else:
                     # found it
-                    print(f"{' '*(indent+4)}==================================================")
-                    print(f"{' '*(indent+4)}@@@@@ {module_name}")
+                    print(f"{' '*indent}--------------------------------------------------")
+                    print(f"{' '*indent}@@@ {module_name}")
+                    x = [x.name if isinstance(x, pAndroidBpM) else x for x in trace]
+                    if module_name not in x:
+                        trace.append(m)
         else:
-            print(f"{' '*(indent+4)}==================================================")
-            print(f"{' '*(indent+4)}can't find {module_name}")
-                    
+            print(f"{' '*indent}--------------------------------------------------")
+            print(f"{' '*indent}XXX {module_name}")
+            x = [x.name if isinstance(x, pAndroidBpM) else x for x in trace]
+            if module_name not in x:
+                trace.append(module_name)
     
     def toXml(self):
         pass
@@ -115,19 +128,55 @@ class pAospBp(object):
         for group in self.groups:
             print(f"group: {group}")
             for bp in self.groups[group]['bps']:
-                bp.dump(indent=2)
+                bp.dump(indent+2)
         print(f"==================================================")
 
+class pAndroidBpM(object):
+    ''' abstraction `module` in Android.bp
+    '''
+    def __init__(self, name, module_type):
+        self.name = name
+        self.type = module_type
+        self.defaults = None
+        self.depends = set()
+
+    def set_defaults(self, property_default):
+        if isinstance(property_default, list):
+            self.defaults = property_default
+
+    def add_depends(self, depends):
+        self.depends.update(depends)
+
+    def dump(self, indent=0):
+        print(f"{' '*indent}==================================================")
+        print(f"{' '*indent}name: {self.name} type: {self.type}")
+        if self.defaults is not None:
+            print(f"{' '*indent}  defaults: {self.defaults}")
+        if len(self.depends) > 0:
+            print(f"{' '*indent}  depends")
+            for depend in sorted(self.depends):
+                print(f"{' '*indent}    {depend}")
 
 class pAndroidBp(object):
-    ignore_module_types = ['soong_config_module_type',
-                           'soong_config_string_variable',
-                           'license',
-                           'ndk_library'
-                           ]
+    ''' abstraction `Android.bp`
+    '''
+    ignore_module_types = [
+        "soong_config_module_type",
+        "soong_config_string_variable",
+        "license",
+        "ndk_library"
+        ]
+    depends_module_property = [
+        "shared_libs",
+        "static_libs",
+        "deps",
+        "header_libs",
+        "defaults",
+        "java_libs"
+        ]
     def __init__(self, file, debug=False):
         self.filepath = file
-        self.modules = list()
+        self.modules = list() #pAndroidBpM
         self.depends = set()
         try:
             # BluePrint only accept string filepath
@@ -147,31 +196,31 @@ class pAndroidBp(object):
 
             if debug:
                 print(f"bp module: {bpm.name}")
-            module = {'type':bpm.__type__, 'name':bpm.name, 'depends':set()}
-            for prop in ["shared_libs", "static_libs", "deps", "header_libs", "defaults", "java_libs"]:
+            
+            module = pAndroidBpM(bpm.name, bpm.__type__)
+            for prop in self.depends_module_property:
                 if debug:
                     print(f"  property: {prop}")
+
                 value = bpm.__dict__.get(prop)
+
                 if debug:
                     print(f"    value: {value}")
                 if isinstance(value, list):
                     xx = self.__flattenlist(value)
-                    module['depends'].update(xx)
+                    module.add_depends(xx)
                     self.depends.update(xx)
 
-            value = bpm.__dict__.get("defaults")
-            if isinstance(value, list):
-                module['defaults'] = value
+            module.set_defaults(bpm.__dict__.get("defaults"))
             self.modules.append(module)
 
-        for m in self.modules:
-            if "defaults" in m:
-                for name in m['defaults']:
-                    depends = self.get_depends(name)
-                    m['depends'].update(depends)
-        for m in self.modules:
-            if 'depends' in m and len(m['depends']) == 0:
-                del(m['depends'])
+        # this is done after parsing all aosp bp
+        # # update depends module by 'defaults' property
+        # for module in self.modules:
+        #     if module.defaults is not None:
+        #         for name in module.defaults:
+        #             depends = self.get_depends(name)
+        #             module.add_depends(depends)
 
     def __flattenlist(self, item):
         x1 = [x for x in item if isinstance(x, list)]
@@ -188,64 +237,66 @@ class pAndroidBp(object):
             return item
                 
     def find_module(self, module_name):
-        x = next((x for x in self.modules if x['name'] == module_name), None)
-        return x
+        module = next((x for x in self.modules if x.name == module_name), None)
+        return module
  
     def get_defaults(self, module_name):
-        return next((x['defaults'] for x in self.modules if x['name'] == module_name), None)
+        return next((x.defaults for x in self.modules if x.name == module_name), None)
 
     def get_depends(self, module_name):
-        x = next((x for x in self.modules if x['name'] == module_name), None)
-        if x is not None:
-            if "depends" in x:
-                return x["depends"]
+        module = next((x for x in self.modules if x.name == module_name), None)
+        if module is not None:
+            return module.depends
         return []
 
-    def dump_module(self, module, indent=0):
-        print(f"{' '*indent}==================================================")
-        if module:
-            print(f"{' '*indent}name: {module['name']} type: {module['type']}")
-        else:
-            print(f"{' '*indent}name: None")
-            return
-        if "defaults" in module:
-            print(f"{' '*indent}  defaults: {module['defaults']}")
-        if "depends" in module:
-            print(f"{' '*indent}  depends")
-            for d in sorted(module['depends']):
-                print(f"{' '*indent}    {d}")
-                    
     def dump(self, indent=0):
         print(f"{' '*indent}==================================================")
         print(f"{' '*indent}file: {self.filepath.as_posix()}")
-        for m in sorted(self.modules, key=lambda x: x['name']):
-            self.dump_module(m, indent+2)
+        for module in sorted(self.modules, key=lambda x: x.name):
+            self.module.dump(indent+2)
         print(f"{' '*indent}  ==================================================")
         print(f"{' '*indent}  all dependency in module")
         print(f"{' '*indent}    depends")
-        for d in sorted(self.depends):
-            print(f"{' '*indent}      {d}")
+        for depend in sorted(self.depends):
+            print(f"{' '*indent}      {depend}")
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--aosp_root', '-r', required=True, help="aosp source directory")
     parser.add_argument('--debug', '-d', action='store_true', help="print debug info")
     parser.add_argument('--find', help="find module and return AndroidBp")
+    parser.add_argument('--trace', help="trace module dependency")
 
     args = parser.parse_args()
+    
     aosp_root = Path(args.aosp_root)
     debug = args.debug
     find = args.find
+    trace = args.trace
 
     aospbp = pAospBp(aosp_root)
-    print(f"{find}")
-    group = aospbp.find_group(find)
-    if group:
-        print(f"  group: {group}")
-    bp = aospbp.find_bp(find)
-    if bp:
-        m = bp.find_module(find)
-        bp.dump_module(m, 2)
-    else:
-        print(f"  None")
+    if find:
+        print(f"{find}")
+        group = aospbp.find_group(find)
+        if group:
+            print(f"  group: {group}")
+        bp = aospbp.find_bp(find)
+        if bp:
+            print(f"  filepath: {bp.filepath.as_posix()}")
+            m = bp.find_module(find)
+            m.dump(2)
+        else:
+            print(f"  None")
+    if trace:
+        print(f"{trace}")
+        depends=list()
+        aospbp.trace_dependency(trace, depends)
+        print(f"==================================================")
+        print(f"depends")
+        print(f"==================================================")
+        for depend in depends:
+            if isinstance(depend, pAndroidBpM):
+                print(f"O: {depend.name}")
+            else:
+                print(f"X: {depend}")
         
